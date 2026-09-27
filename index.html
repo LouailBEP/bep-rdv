@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prise de Rendez-vous - Coordination BEP</title>
+
+  <!-- PWA & Métadonnées -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#1e3a8a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --primary-light: #3b82f6;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #1e293b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --danger: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 16px;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 12px 0;
+      border-bottom: 2px solid var(--border);
+    }
+
+    h1 {
+      color: var(--primary);
+      font-size: 1.4rem;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #64748b;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--primary-light);
+    }
+
+    .slots-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .slot-btn {
+      padding: 10px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .slot-btn.selected {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .btn-submit:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    .confirmation-box {
+      display: none;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      color: #166534;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .loading-spinner {
+      display: none;
+      text-align: center;
+      margin-top: 10px;
+      font-weight: 500;
+      color: var(--primary);
+    }
+
+    /* Style Administration */
+    .admin-day-row {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .admin-day-row h3 {
+      font-size: 1rem;
+      color: var(--primary);
+      margin-bottom: 6px;
+    }
+
+    .admin-times-input {
+      font-family: monospace;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 0.8rem;
+    }
+
+    footer a {
+      color: #94a3b8;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Coordination BEP</h1>
+    <div class="subtitle">Prise de rendez-vous en ligne</div>
+  </header>
+
+  <main>
+    <!-- VOLET RESERVATION (PARENTS / ENSEIGNANTS) -->
+    <div id="booking-tab" class="tab-content active">
+      <div id="booking-form-card" class="card">
+        <form id="booking-form" onsubmit="handleBooking(event)">
+          
+          <div class="form-group">
+            <label for="user-type">Vous êtes :</label>
+            <select id="user-type" required>
+              <option value="Parent">Parent d'élève</option>
+              <option value="Enseignant">Enseignant / Équipe éducative</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="student-name">Nom et Prénom de l'élève :</label>
+            <input type="text" id="student-name" placeholder="ex: DUPONT Lucas" required>
+          </div>
+
+          <div class="form-group">
+            <label for="student-class">Classe / Niveau :</label>
+            <select id="student-class" required>
+              <option value="">-- Sélectionner --</option>
+              <option value="6eme">6ème</option>
+              <option value="5eme">5ème</option>
+              <option value="4eme">4ème</option>
+              <option value="3eme">3ème</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="appointment-reason">Motif de la demande :</label>
+            <select id="appointment-reason" required>
+              <option value="">-- Sélectionner --</option>
+              <option value="PAP">Mise en place / Suivi PAP</option>
+              <option value="PPS">Suivi PPS / GE-VA-D</option>
+              <option value="PPRE">PPRE / Aménagements</option>
+              <option value="Bilan">Point d'étape / Bilan</option>
+              <option value="Autre">Autre demande</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="booking-date">Date du rendez-vous :</label>
+            <input type="date" id="booking-date" required onchange="generateSlots()">
+          </div>
+
+          <div class="form-group">
+            <label>Créneau horaire disponible :</label>
+            <div id="slots-container" class="slots-grid">
+              <small style="color: #64748b;">Choisissez d'abord une date.</small>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="contact-email">Votre e-mail de contact :</label>
+            <input type="email" id="contact-email" placeholder="nom@exemple.fr" required>
+          </div>
+
+          <div class="form-group">
+            <label for="contact-phone">Téléphone :</label>
+            <input type="tel" id="contact-phone" placeholder="06 00 00 00 00" required>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn-submit" disabled>Confirmer la réservation</button>
+          <div id="loading" class="loading-spinner">Enregistrement en cours...</div>
+        </form>
+      </div>
+
+      <!-- Message de confirmation -->
+      <div id="confirmation-msg" class="confirmation-box">
+        <h2>✅ Rendez-vous confirmé !</h2>
+        <p>Votre demande a bien été enregistrée dans le planning de la coordination BEP.</p>
+        <br>
+        <div id="confirmation-details"></div>
+      </div>
+    </div>
+
+    <!-- VOLET ADMINISTRATION (PROTÉGÉ PAR MOT DE PASSE : 3942) -->
+    <div id="admin-tab" class="tab-content">
+      <div class="card">
+        <h2>⚙️ Gestion des Créneaux Horaires</h2>
+        <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 16px;">
+          Définissez les heures de rendez-vous disponibles pour chaque jour (séparées par des virgules). Laisser vide pour fermer un jour.
+        </p>
+
+        <form id="admin-form" onsubmit="saveAdminConfig(event)">
+          <div class="admin-day-row">
+            <h3>Lundi</h3>
+            <input type="text" id="admin-Lundi" class="admin-times-input" placeholder="ex: 11:30, 12:00, 16:00, 16:30, 17:00">
+          </div>
+
+          <div class="admin-day-row">
+            <h3>Mardi</h3>
+            <input type="text" id="admin-Mardi" class="admin-times-input" placeholder="ex: 09:00, 10:00, 11:00">
+          </div>
+
+          <div class="admin-day-row">
+            <h3>Mercredi</h3>
+            <input type="text" id="admin-Mercredi" class="admin-times-input" placeholder="Laisser vide pour fermer">
+          </div>
+
+          <div class="admin-day-row">
+            <h3>Jeudi</h3>
+            <input type="text" id="admin-Jeudi" class="admin-times-input" placeholder="ex: 13:30, 14:15, 15:15">
+          </div>
+
+          <div class="admin-day-row">
+            <h3>Vendredi</h3>
+            <input type="text" id="admin-Vendredi" class="admin-times-input" placeholder="ex: 08:30, 09:15, 10:15">
+          </div>
+
+          <button type="submit" id="admin-save-btn" class="btn-submit">💾 Enregistrer la configuration</button>
+          <div id="admin-loading" class="loading-spinner">Mise à jour sur Google Sheets...</div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <a href="#" onclick="openAdmin(event)">⚙️ Espace Administration</a>
+  </footer>
+
+  <script>
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyYyxcUjV6T_IaJh0tapA7MEc4PKPHWWdWjBT_bvWnIRvYe8cOIxiEf6DUieSSXSaTMsQ/exec";
+    const ADMIN_PASSWORD = "3942"; // MOT DE PASSE D'ACCÈS AU VOLET ADMINISTRATEUR
+
+    let weeklySchedule = {
+      "Lundi": ["11:30", "12:00", "16:00", "16:30", "17:00"],
+      "Mardi": ["09:00", "10:00", "11:00", "13:30", "14:30"],
+      "Mercredi": [],
+      "Jeudi": ["13:30", "14:15", "15:15", "16:00"],
+      "Vendredi": ["08:30", "09:15", "10:15", "11:00"]
+    };
+
+    let selectedSlot = null;
+
+    // Chargement automatique des créneaux depuis Google Sheets
+    window.addEventListener('load', () => {
+      fetch(GOOGLE_SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+          if (data && Object.keys(data).length > 0) {
+            weeklySchedule = data;
+          }
+        })
+        .catch(err => console.log("Chargement avec les créneaux par défaut."));
+    });
+
+    // Génération des créneaux selon le jour choisi
+    function generateSlots() {
+      const dateInput = document.getElementById('booking-date').value;
+      const container = document.getElementById('slots-container');
+      container.innerHTML = '';
+      selectedSlot = null;
+      document.getElementById('submit-btn').disabled = true;
+
+      if (!dateInput) return;
+
+      const dateParts = dateInput.split('-');
+      const selectedDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+      const dayIndex = selectedDate.getDay(); 
+
+      const daysMap = { 1: "Lundi", 2: "Mardi", 3: "Mercredi", 4: "Jeudi", 5: "Vendredi" };
+      const dayName = daysMap[dayIndex];
+
+      if (!dayName || !weeklySchedule[dayName] || weeklySchedule[dayName].length === 0) {
+        container.innerHTML = '<small style="color: #ef4444;">Aucun rendez-vous disponible ce jour-là.</small>';
+        return;
+      }
+
+      weeklySchedule[dayName].forEach(time => {
+        if (!time) return;
+        const btn = document.createElement('div');
+        btn.className = 'slot-btn';
+        btn.innerText = time;
+        btn.onclick = () => selectSlot(btn, time);
+        container.appendChild(btn);
+      });
+    }
+
+    function selectSlot(element, time) {
+      document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+      element.classList.add('selected');
+      selectedSlot = time;
+      document.getElementById('submit-btn').disabled = false;
+    }
+
+    function handleBooking(e) {
+      e.preventDefault();
+      if (!selectedSlot) return;
+
+      const submitBtn = document.getElementById('submit-btn');
+      const loading = document.getElementById('loading');
+      submitBtn.disabled = true;
+      loading.style.display = 'block';
+
+      const appData = {
+        userType: document.getElementById('user-type').value,
+        studentName: document.getElementById('student-name').value,
+        studentClass: document.getElementById('student-class').value,
+        reason: document.getElementById('appointment-reason').value,
+        date: document.getElementById('booking-date').value,
+        time: selectedSlot,
+        email: document.getElementById('contact-email').value,
+        phone: document.getElementById('contact-phone').value
+      };
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(appData)
+      })
+      .then(() => {
+        loading.style.display = 'none';
+        document.getElementById('booking-form-card').style.display = 'none';
+        
+        const confBox = document.getElementById('confirmation-msg');
+        confBox.style.display = 'block';
+
+        document.getElementById('confirmation-details').innerHTML = `
+          <strong>Élève :</strong> ${appData.studentName} (${appData.studentClass})<br>
+          <strong>Date :</strong> Le ${appData.date} à ${appData.time}<br>
+          <strong>Motif :</strong> ${appData.reason}
+        `;
+      })
+      .catch(error => {
+        loading.style.display = 'none';
+        submitBtn.disabled = false;
+        alert("Erreur lors de l'envoi : " + error);
+      });
+    }
+
+    // Accès au volet Administration
+    function openAdmin(e) {
+      e.preventDefault();
+      const pwd = prompt("Saisissez le mot de passe administrateur :");
+      if (pwd === ADMIN_PASSWORD) {
+        document.getElementById('booking-tab').classList.remove('active');
+        document.getElementById('admin-tab').classList.add('active');
+        
+        // Pré-remplissage des champs avec la configuration courante
+        ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"].forEach(day => {
+          const field = document.getElementById('admin-' + day);
+          if (field && weeklySchedule[day]) {
+            field.value = weeklySchedule[day].join(', ');
+          }
+        });
+      } else if (pwd !== null) {
+        alert("Mot de passe incorrect.");
+      }
+    }
+
+    // Sauvegarde de la configuration via Google Apps Script
+    function saveAdminConfig(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('admin-save-btn');
+      const loading = document.getElementById('admin-loading');
+
+      saveBtn.disabled = true;
+      loading.style.display = 'block';
+
+      const newSchedule = {};
+      ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"].forEach(day => {
+        const val = document.getElementById('admin-' + day).value;
+        newSchedule[day] = val ? val.split(',').map(s => s.trim()) : [];
+      });
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: "updateConfig",
+          schedule: newSchedule
+        })
+      })
+      .then(() => {
+        weeklySchedule = newSchedule;
+        loading.style.display = 'none';
+        saveBtn.disabled = false;
+        alert("Configuration enregistrée avec succès !");
+        
+        // Retour automatique à la vue réservations
+        document.getElementById('admin-tab').classList.remove('active');
+        document.getElementById('booking-tab').classList.add('active');
+      })
+      .catch(err => {
+        loading.style.display = 'none';
+        saveBtn.disabled = false;
+        alert("Erreur lors de la sauvegarde : " + err);
+      });
+    }
+
+    // Service Worker pour Progressive Web App (PWA)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error:', err));
+      });
+    }
+  </script>
+</body>
+</html>
